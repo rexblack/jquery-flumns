@@ -429,7 +429,7 @@
       
       renderItems();
       
-      if (options.masonry) {
+      if (options.masonry && columnCount > 1) {
         layoutMasonry();
         renderItems();
       }
