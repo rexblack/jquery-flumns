@@ -1,0 +1,231 @@
+<!DOCTYPE HTML>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    
+    <title>Flumns</title>
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    
+    <link href="http://netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css" rel="stylesheet">
+       
+    <script src="http://codeorigin.jquery.com/jquery-1.10.2.min.js"></script>
+    
+    <script src="http://netdna.bootstrapcdn.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
+    
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/holder/2.2.0/holder.js"></script>
+    
+    <script src="../src/js/jquery.flumns.js"></script>
+    
+    <script>
+    
+      function createItems(size, offset, style) {
+        
+        size = size || 12;
+        offset = offset || 0;
+        var string = "";
+        var text = "Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus.";
+        var words = text.split(/\s+/);
+        for (var i = 0; i < size; i++) {
+          var length = Math.floor(Math.random() * words.length) + 1;
+          switch (style) {
+            case 'thumbnail': 
+              string+= '<div class="thumbnail"><img data-src="holder.js/300x200/auto" alt="..."><div class="caption"><h3>Item ' + (offset + i + 1) + '</h3><p>' + words.slice(0, length).join(" ") + '</p><p><a href="#" class="btn btn-primary" role="button">Button</a> <a href="#" class="btn btn-default" role="button">Button</a></p></div></div>';
+              break;
+            case 'panel': 
+            default: 
+              string+= '<div class="panel panel-primary"><div class="panel-heading"><h3 class="panel-title">Item ' + (offset + i + 1) + '</h3></div><div class="panel-body">' + words.slice(0, length).join(" ") + '</div></div>';
+          }
+        }
+        return $(string);
+      }
+      
+    
+      $(function() {
+        
+        var flumns = $('.grid')
+        // .append(createItems(12, 0, $('select[name="item_style"]').val()))
+        .flumns({
+          columnPrefix: ["col-md-", "col-xs-"],
+          align: 'justify', 
+          columnWidth: 240, 
+          grid: false, 
+          layout: function() {
+            $('#exec-time').html(this.getExecTime() + "ms");
+          }
+        }).data('flumns');
+
+        // $('#more').on('click', function(event) {
+          // flumns.addAll(createItems(12, flumns.size(), $('select[name="item_style"]').val()));
+          // Holder.run();
+          // event.preventDefault();
+        // });
+        
+        $('#options_form').on('change', function() {
+          
+          console.info("******** FORM CHANGED *********");
+          
+          var itemStyle = $('select[name="item_style"]').val();
+          var itemSize = $('input[name="item_size"]').val();
+          var size = flumns.size();
+          var options = {
+            align: $('input[name="align"]:checked').val(), 
+            grid: $('input[name="grid"]:checked').val(), 
+            columnWidth: $('input[name="column_width"]').val(), 
+            masonry: $('input[name="masonry"]:checked').val(), 
+            itemsAdded: function() {
+              console.log("items added");
+              Holder.run();
+            }
+          };
+          var itemsChanged = !$(flumns.get(0)).hasClass(itemStyle) || itemSize != size;
+          if (itemsChanged) {
+            options.items = createItems(itemSize, 0, itemStyle);
+            
+          }
+          flumns.setOptions(options);
+         
+        }).on('submit', function(event) {
+          event.preventDefault();
+        }).trigger('change');
+        
+      });
+
+      
+    </script>
+    
+    
+    <style>
+      
+      #options-group {
+        margin-bottom: 20px;
+      }
+      
+      .thumbnail img {
+        /*min-width: 320px;*/
+        width: 100%;
+      }
+      
+      .container {
+        
+      }
+      
+      .row {
+        /*text-align: center;*/
+      }
+      
+      .btn-block {
+        margin: auto;
+      }
+      
+      #more {
+        margin-bottom: 20px;
+      }
+      
+    </style>
+
+  </head>
+  
+  <body>
+    
+    <header class="subhead" id="overview">
+      <div class="container">
+        <h1>jquery-flumns</h1>
+        <p class="lead">A responsive masonry-like javascript-driven grid-layout
+        </p>
+      </div>
+    </header>
+  
+    <div class="container">
+      
+      <form id="options_form">
+        
+        <div class="row">
+          
+          <div class="col-md-4">
+            
+            <div class="form-group">
+              <label class="control-label">Align</label>
+              <div>
+                <label class="radio-inline">
+                  <input name="align" type="radio" value="justify" checked="checked"> Justify
+                </label>
+                <label class="radio-inline">
+                  <input name="align" type="radio" value="left"> Left
+                </label>
+                <label class="radio-inline">
+                  <input name="align" type="radio" value="center"> Center
+                </label>
+                <label class="radio-inline">
+                  <input name="align" type="radio" value="right"> Right
+                </label>
+              </div>
+            </div>
+          </div>
+        
+        
+          <div class="col-md-1">
+            <div class="form-group">
+              <label class="control-label">Grid</label>
+              <div>
+                <label class="checkbox-inline">
+                  <input type="checkbox" name="grid" value="true" checked="checked"> Snap
+                </label>
+              </div>
+            </div>
+          </div>
+ 
+          <div class="col-md-2">
+            <div class="form-group">
+              <label class="control-label">Column width</label>
+              <input type="number" class="form-control" name="column_width" value="" placeholder="auto">
+            </div>
+          </div>
+          
+          <div class="col-md-2">
+            <div class="form-group">
+              <label class="control-label">Mode</label>
+              <div>
+                <label class="checkbox-inline">
+                  <input type="checkbox" name="masonry" value="true"> Masonry
+                </label>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col-md-2">
+            <div class="form-group">
+              <label class="control-label">Style</label>
+              <select name="item_style" class="form-control">
+                <option value="panel">Panel</option>
+                <option value="thumbnail">Thumbnail</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="col-md-1">
+            <div class="form-group">
+              <label class="control-label">Size</label>
+              <input name="item_size" class="form-control" value="36"/>
+            </div>
+          </div>
+          
+        
+        </div>
+        
+        
+      </form>  
+      
+
+      
+      <div class="row grid">
+
+      </div>
+
+      
+    </div>
+  
+  </body>
+  
+
+</html>
