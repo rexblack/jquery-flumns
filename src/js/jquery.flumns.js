@@ -9,8 +9,10 @@
     columnPrefix: "", 
     columnOffsetPrefix: "", 
     bindResize: true, 
-    masonry: true, 
+    masonry: false, 
+    resizeDelay: 0, 
     // callbacks
+    beforeLayout: null, 
     layout: null, 
     render: null, 
     itemsAdded: null
@@ -43,7 +45,17 @@
   }());
 
 
-  
+  function setCSS(element, properties) {
+    var props = [];
+    for (var name in properties) {
+      var value = properties[name];
+      if (value) {
+        props.push(name + ": " + value);
+      }
+    }
+    var cssText = props.join("; ");
+    $(element).css('cssText', cssText);
+  }
   
   function getClientRect(element) {
     // ie8 compatible
@@ -72,6 +84,8 @@
     var _columnCount = 0;
     var _columnWidth = 0;
     
+    var resizeTimeoutId = null;
+    
     // debug
     var execTime = 0;
     
@@ -94,9 +108,11 @@
     };
     
     this.add = function(item, index) {
-      items.splice(index, 0, item);
-      itemsAdded = true;
-      this.invalidate();
+      if (isItem(item)) {
+        items.splice(index, 0, item);
+        itemsAdded = true;
+        this.invalidate();
+      }
     };
     
     // TODO: use document fragment for add all
@@ -247,30 +263,45 @@
       }
     }
     
-    
+    function layoutAlign(width) {
+      // align columns
+      width = width || getClientRect(element).width;
+      var align = options.align;
+      var alignFloat = align == "center" ? 0.5 : align == "right" ? 1 : 0;
+      var totalColumnWidth = this.getColumnWidth() * this.getColumnCount();
+      for (var i = 0; i < columns.length; i++) {
+        var column = columns[i];
+        var x = (width - totalColumnWidth) * alignFloat;
+        var css = column.css;
+        if (x > 0) {
+          css.position = 'relative';
+          css.left = x + "px";
+        } else {
+          css.position = '';
+          css.left = '';
+        }
+      }
+      
+    }
     
     // heart of the plugin
     function layout() {
-            
-      console.time("layout");
       
-      // layout
-      
-      var columnWidthOption = getColumnWidthOption();
+      // console.time('layout');
+ 
+      var columnWidth = getColumnWidthOption();
       var gridOption = getGridOption();
       var align = options.align;
       
       var width = getClientRect(element).width;
       
-      var columnFloat = width / columnWidthOption;
+      var columnFloat = width / columnWidth;
       var columnCount = columnFloat | 0;
       
       var columnOffset = columnFloat - columnCount;
       
       var columnWeightFloat = (gridOption || Flumns.GRID_BASE) / columnCount;
       var columnWeight = columnWeightFloat | 0;
-      
-      var columnWidth = columnWidthOption;
       
       if (align == "justify") {
         if (gridOption) {
@@ -284,15 +315,19 @@
         columnWidth = width / gridOption * columnWeight;
       }
       
-      if (columnCount != _columnCount) {
+      // callback
+      if (typeof options.beforeLayout  == 'function') {
+        options.beforeLayout.call(this);
+      }
       
+      if (columnCount != _columnCount) {
+        
         _columnCount = columnCount;
         _columnWidth = columnWidth;
         
         // setup columns
         
         for (var c = 0; c < columnCount; c++) {
-
           var column = columns[c] || {css: {}, className: '', height: 0};
           column.element = column.element || (function() {
             return $(document.createElement('div')); 
@@ -309,49 +344,40 @@
           if (options.columnPrefix) {
             css.display = '';
             css.verticalAlign = '';
-            className = getGridClass(options.columnPrefix, columnWeight);
+            column.className = getGridClass(options.columnPrefix, columnWeight);
           } else {
             css.display = 'inline-block';
             css.verticalAlign = 'top';
           }
           column.css = css;
-          column.className = className;
-          
           columns[c] = column;
-          
         }
         
-        layoutItems();
+        layoutAlign.call(this, width);
         
-      }
+        renderColumns.call(this);
+        
+        layoutItems.call(this);
+        renderItems.call(this);
       
-      // align columns
-      var alignFloat = align == "center" ? 0.5 : align == "right" ? 1 : 0;
-      var totalColumnWidth = this.getColumnWidth() * this.getColumnCount();
-      for (var i = 0; i < columns.length; i++) {
-        var column = columns[i];
-        var x = (width - totalColumnWidth) * alignFloat;
-        var css = column.css;
-        if (x > 0) {
-          css.position = 'relative';
-          css.left = x + "px";
-        } else {
-          css.position = '';
-          css.left = '';
+        if (options.masonry && columnCount > 1) {
+          layoutMasonry.call(this);
+          renderItems.call(this);
         }
-      }
-      
-      window.requestAnimationFrame(function() {
+
+      } else {
+        layoutAlign.call(this, width);
         // render
-        renderColumns();
-      });
-      
-      console.timeEnd("layout");
+        renderColumns.call(this);
+      }
+
       
       // callback
       if (typeof options.layout  == 'function') {
         options.layout.call(this);
       }
+      
+      // console.timeEnd('layout');
     }
     
     function layoutItems() {
@@ -367,43 +393,37 @@
     }
     
     function layoutMasonry() {
-      
       var columnCount = instance.getColumnCount(); 
-      
-      // reset column heights
-      for (var c = 0; c < columns.length; c++) {
-        columns[c].height = 0;
-      }
-        
+      var columnHeights = [];
+      var itemHeights = [];
       for (var i = 0; i < items.length; i++) {
-          
+        itemHeights[i] = getClientRect(items[i]).height;
+      }
+      
+      for (var i = 0; i < items.length; i++) {
          var item = items[i];
          var columnIndex = 0;
-          
          if (i >= columnCount) {
            var minHeight = 0;
            for (var c = 0; c < columnCount; c++) {
              var column = columns[c];
-             if (minHeight == 0 || column.height < minHeight) {
-               minHeight = column.height;
+             if (minHeight == 0 || columnHeights[c] < minHeight) {
+               minHeight = columnHeights[c];
                columnIndex = c;
              }
            }
          } else {
            columnIndex = i % columnCount;
          }
-         
          var column = columns[columnIndex];
-         column.height+= getClientRect(item).height;
-         
+         columnHeights[columnIndex] = columnHeights[columnIndex] || 0;
+         columnHeights[columnIndex]+= itemHeights[i];
          column.fragment = column.fragment || document.createDocumentFragment();
          column.fragment.appendChild(item);
-         
       }
     }
     
     function renderColumns() {
-      console.time("render");
       
       var columnCount = instance.getColumnCount();
       var len = Math.max(columnCount, columns.length);
@@ -420,51 +440,41 @@
           
           columnElement.removeClass();
           columnElement.addClass(column.className);
-          columnElement.css(column.css);
+          setCSS(columnElement, column.css);
           
         } else {
           columnElement.remove();
         }
-      }
-      
-      renderItems();
-      
-      if (options.masonry && columnCount > 1) {
-        layoutMasonry();
-        renderItems();
-      }
-      
-      console.timeEnd("render");
-      
-      // callback
-      if (itemsAdded) {
-        if (typeof options.itemsAdded  == 'function') {
-          options.itemsAdded.call(this);
-        }
-        itemsAdded = false;
-      }
-      
-      
-      if (typeof options.render  == 'function') {
-        options.render.call(this);
+        
       }
     }
     
     function renderItems() {
-      
       var columnCount = instance.getColumnCount();
       for (var c = 0; c < columnCount; c++) {
         var column = columns[c];
         if (column.fragment) {
           column.element.append(column.fragment);
           column.fragment = null;
-          
         }
       }
     }
     
+    function triggerLayout() {
+      window.requestAnimationFrame(function() {
+        layout.call(instance);
+      });
+    }
+    
     function resizeHandler(event) {
-      layout.call(instance);
+      window.clearTimeout(resizeTimeoutId);
+      if (options.resizeDelay > 0) {
+        resizeTimeoutId = window.setTimeout(function() {
+          triggerLayout();
+        }, options.resizeDelay);
+      } else {
+        triggerLayout();
+      }
     }
     
     function init() {

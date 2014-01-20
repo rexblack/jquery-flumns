@@ -44,7 +44,6 @@
       $(function() {
         
         var flumns = $('.grid')
-        // .append(createItems(12, 0, $('select[name="item_style"]').val()))
         .flumns({
           columnPrefix: ["col-md-", "col-xs-"],
           align: 'justify', 
@@ -55,16 +54,7 @@
           }
         }).data('flumns');
 
-        // $('#more').on('click', function(event) {
-          // flumns.addAll(createItems(12, flumns.size(), $('select[name="item_style"]').val()));
-          // Holder.run();
-          // event.preventDefault();
-        // });
-        
         $('#options_form').on('change', function() {
-          
-          console.info("******** FORM CHANGED *********");
-          
           var itemStyle = $('select[name="item_style"]').val();
           var itemSize = $('input[name="item_size"]').val();
           var size = flumns.size();
@@ -72,18 +62,16 @@
             align: $('input[name="align"]:checked').val(), 
             grid: $('input[name="grid"]:checked').val(), 
             columnWidth: $('input[name="column_width"]').val(), 
-            masonry: $('input[name="masonry"]:checked').val(), 
-            itemsAdded: function() {
-              console.log("items added");
-              Holder.run();
-            }
+            masonry: $('input[name="masonry"]:checked').val()
           };
           var itemsChanged = !$(flumns.get(0)).hasClass(itemStyle) || itemSize != size;
           if (itemsChanged) {
             options.items = createItems(itemSize, 0, itemStyle);
-            
           }
           flumns.setOptions(options);
+          if (itemsChanged) {
+            Holder.run();
+          }
          
         }).on('submit', function(event) {
           event.preventDefault();
@@ -102,16 +90,7 @@
       }
       
       .thumbnail img {
-        /*min-width: 320px;*/
         width: 100%;
-      }
-      
-      .container {
-        
-      }
-      
-      .row {
-        /*text-align: center;*/
       }
       
       .btn-block {
